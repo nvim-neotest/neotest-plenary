@@ -8,13 +8,14 @@ local function script_path()
   return str:match("(.*/)")
 end
 
-local function join_results(base, update)
-  if not base then
-    return update
+local function join_results(base_result, update)
+  if not base_result or not update then
+    return base_result or update
   end
-  local status = (base.status == "failed" or update == "failed") and "failed" or "passed"
-  local errors = (base.errors or update.errors)
-      and (vim.list_extend(base.errors or {}, update.errors or {}))
+  local status = (base_result.status == "failed" or update.status == "failed") and "failed"
+    or "passed"
+  local errors = (base_result.errors or update.errors)
+      and (vim.list_extend(base_result.errors or {}, update.errors or {}))
     or nil
   return {
     status = status,
@@ -22,7 +23,7 @@ local function join_results(base, update)
   }
 end
 
-local test_script = (Path.new(script_path()):parent():parent() / "run_tests.sh").filename
+local test_script = (Path.new(script_path()):parent():parent() / "run_tests.lua").filename
 
 ---@type NeotestAdapter
 local PlenaryNeotestAdapter = { name = "neotest-plenary" }
@@ -34,8 +35,7 @@ end
 ---@async
 ---@return Tree | nil
 function PlenaryNeotestAdapter.discover_positions(path)
-  if path and not lib.files.is_dir(path) then
-    local query = [[
+  local query = [[
       ((function_call
         (identifier) @func_name
         (arguments (_) @namespace.name (function_definition))
@@ -46,10 +46,7 @@ function PlenaryNeotestAdapter.discover_positions(path)
         (arguments (_) @test.name (function_definition))
       ) (#match? @func_name "it")) @test.definition
     ]]
-    return lib.treesitter.parse_positions(path, query, { nested_namespaces = true })
-  end
-  local files = lib.func_util.filter_list(base.is_test_file, lib.files.find({ path }))
-  return lib.files.parse_dir_from_files(path, files)
+  return lib.treesitter.parse_positions(path, query, { nested_namespaces = true })
 end
 
 ---@param args NeotestRunArgs
@@ -75,14 +72,20 @@ function PlenaryNeotestAdapter.build_spec(args)
       table.insert(filters, 1, { parent_pos.range[1], parent_pos.range[3] })
     end
   end
-  local script_args = vim.tbl_flatten({
-    results_path,
-    pos.path,
-    vim.inspect(filters),
-  })
   local command = vim.tbl_flatten({
+    "nvim",
+    "--headless",
+    "-u",
     test_script,
-    script_args,
+    "--noplugin",
+    "-c",
+    "lua _run_tests({results = '"
+      .. results_path
+      .. "', file = '"
+      .. vim.fn.escape(pos.path, "'")
+      .. "', filter = "
+      .. vim.inspect(filters)
+      .. "})",
   })
   return {
     command = command,
@@ -140,6 +143,9 @@ end
 ---@param tree Tree
 ---@return NeotestResult[]
 function PlenaryNeotestAdapter.results(spec, _, tree)
+  if tree:data().type == "file" and #tree:children() == 0 then
+    tree = PlenaryNeotestAdapter.discover_positions(tree:data().path)
+  end
   -- TODO: Find out if this JSON option is supported in future
   local success, data = pcall(lib.files.read, spec.context.results_path)
   if not success then
@@ -176,19 +182,25 @@ function PlenaryNeotestAdapter.results(spec, _, tree)
   --- Need to combine using alias map
 
   local aliases = {}
-  for alias, line in pairs(locations) do
-    local node = tree:sorted_search(line, function(pos)
-      return pos.range[1]
-    end, false)
-    if not node then
-      error("Node not found for line " .. line)
+  local file_tree = tree
+  if file_tree:data().type ~= "file" then
+    for parent in tree:iter_parents() do
+      if parent:data().type == "file" then
+        file_tree = parent
+        break
+      end
     end
-    local pos = node:data()
-    aliases[pos.id] = aliases[pos.id] or {}
-    table.insert(aliases[pos.id], alias)
+  end
+  for alias, lines in pairs(locations) do
+    for _, line in pairs(lines) do
+      local node = lib.positions.nearest(file_tree, line)
+      local pos = node:data()
+      aliases[pos.id] = aliases[pos.id] or {}
+      table.insert(aliases[pos.id], alias)
+    end
   end
 
-  for _, node in tree:iter_nodes() do
+  local function get_result_of_node(node)
     local pos = node:data()
     if pos.type == "test" and not results[pos.id] then
       local namespace_aliases = {}
@@ -207,6 +219,10 @@ function PlenaryNeotestAdapter.results(spec, _, tree)
         end
       end
     end
+  end
+
+  for _, node in tree:iter_nodes() do
+    get_result_of_node(node)
   end
 
   return results
