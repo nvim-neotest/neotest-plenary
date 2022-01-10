@@ -7,6 +7,7 @@ _G._run_tests = function(args)
     local code
 
     local busted = require("plenary.busted")
+    local async = require("plenary.async")
     local base_format = busted.format_results
     local func_locations = {}
     os.exit = function(code_)
@@ -49,9 +50,21 @@ _G._run_tests = function(args)
       end
     end
 
+    local function wrap_async_busted_func(busted_func)
+      return function(desc, func)
+        if not filter(func) then
+          return
+        end
+        add_to_locations(desc, func)
+
+        return busted_func(desc, async.util.will_block(func))
+      end
+    end
+
     busted.describe = wrap_busted_func(busted.describe)
     busted.inner_describe = wrap_busted_func(busted.inner_describe)
     busted.it = wrap_busted_func(busted.it)
+    async.tests.it = wrap_async_busted_func(async.tests.it)
 
     it = busted.it
     describe = busted.describe
@@ -66,3 +79,4 @@ _G._run_tests = function(args)
     base_exit(1)
   end
 end
+

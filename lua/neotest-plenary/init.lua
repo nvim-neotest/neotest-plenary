@@ -39,12 +39,17 @@ function PlenaryNeotestAdapter.discover_positions(path)
       ((function_call
         (identifier) @func_name
         (arguments (_) @namespace.name (function_definition))
-      ) (#match? @func_name "describe")) @namespace.definition
+      ) (#match? @func_name "^describe$")) @namespace.definition
 
       ((function_call
         (identifier) @func_name
         (arguments (_) @test.name (function_definition))
-      ) (#match? @func_name "it")) @test.definition
+      ) (#match? @func_name "^it$")) @test.definition
+
+      ((function_call
+        (field_expression (_) (property_identifier) @func_name)
+        (arguments (_) @test.name (function_definition))
+      ) (#match? @func_name "^it$")) @test.definition
     ]]
   return lib.treesitter.parse_positions(path, query, { nested_namespaces = true })
 end
@@ -202,7 +207,7 @@ function PlenaryNeotestAdapter.results(spec, _, tree)
 
   local function get_result_of_node(node)
     local pos = node:data()
-    if pos.type == "test" and not results[pos.id] then
+    if pos.type ~= "file" and not results[pos.id] then
       local namespace_aliases = {}
       for parent in node:iter_parents() do
         if parent:data().type ~= "namespace" then
@@ -212,7 +217,7 @@ function PlenaryNeotestAdapter.results(spec, _, tree)
       end
       local namespace_permutations = permutations(namespace_aliases)
       for _, perm in ipairs(namespace_permutations) do
-        for _, alias in ipairs(aliases[pos.id]) do
+        for _, alias in ipairs(aliases[pos.id] or {}) do
           local alias_id = table.concat(vim.tbl_flatten({ pos.path, perm, alias }), "::")
           results[pos.id] = join_results(results[pos.id], results[alias_id])
           results[alias_id] = nil
