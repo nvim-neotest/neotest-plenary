@@ -61,10 +61,10 @@ _G._run_tests = function(args)
       end
     end
 
+    async.tests.it = wrap_async_busted_func(busted.it)
     busted.describe = wrap_busted_func(busted.describe)
     busted.inner_describe = wrap_busted_func(busted.inner_describe)
     busted.it = wrap_busted_func(busted.it)
-    async.tests.it = wrap_async_busted_func(async.tests.it)
 
     it = busted.it
     describe = busted.describe
@@ -79,4 +79,3 @@ _G._run_tests = function(args)
     base_exit(1)
   end
 end
-
