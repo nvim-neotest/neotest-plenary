@@ -28,6 +28,8 @@ local test_script = (Path.new(script_path()):parent():parent() / "run_tests.lua"
 ---@type NeotestAdapter
 local PlenaryNeotestAdapter = { name = "neotest-plenary" }
 
+PlenaryNeotestAdapter.root = lib.files.match_root_pattern("lua")
+
 function PlenaryNeotestAdapter.is_test_file(file_path)
   return base.is_test_file(file_path)
 end
@@ -107,7 +109,14 @@ local function convert_plenary_result(result, status, file)
     {
       status = status,
       short = result.msg,
-      errors = result.msg and { { message = result.msg } },
+      errors = result.msg and {
+        {
+          message = result.msg,
+          line = result.trace
+            and result.trace.source == "@" .. file
+            and result.trace.currentline - 1,
+        },
+      },
     }
 end
 
@@ -172,7 +181,6 @@ function PlenaryNeotestAdapter.results(spec, _, tree)
   local file_result = { status = "passed", errors = {} }
   local failed = vim.list_extend({}, plenary_results.errs)
   vim.list_extend(failed, plenary_results.fail)
-  vim.list_extend(failed, plenary_results.fatal) -- TODO: Verify shape
 
   for _, plen_result in pairs(failed) do
     local pos_id, pos_result = convert_plenary_result(plen_result, "failed", spec.context.file)
@@ -224,6 +232,9 @@ function PlenaryNeotestAdapter.results(spec, _, tree)
         end
       end
     end
+    if not results[pos.id] then
+      results[pos.id] = results[pos.path]
+    end
   end
 
   for _, node in tree:iter_nodes() do
@@ -240,3 +251,4 @@ setmetatable(PlenaryNeotestAdapter, {
 })
 
 return PlenaryNeotestAdapter
+
