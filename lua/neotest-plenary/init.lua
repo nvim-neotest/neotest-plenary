@@ -222,7 +222,7 @@ function PlenaryNeotestAdapter.results(spec, _, tree)
 
   local function get_result_of_node(node)
     local pos = node:data()
-    if pos.type ~= "file" and not results[pos.id] then
+    if not results[pos.id] then
       local namespace_aliases = {}
       for parent in node:iter_parents() do
         if parent:data().type ~= "namespace" then
@@ -245,7 +245,9 @@ function PlenaryNeotestAdapter.results(spec, _, tree)
   end
 
   for _, node in tree:iter_nodes() do
-    get_result_of_node(node)
+    if node:data().type == "test" then
+      get_result_of_node(node)
+    end
   end
 
   return results
@@ -258,4 +260,3 @@ setmetatable(PlenaryNeotestAdapter, {
 })
 
 return PlenaryNeotestAdapter
-
