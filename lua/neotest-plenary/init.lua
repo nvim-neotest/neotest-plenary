@@ -1,4 +1,4 @@
-local logger = require("neotest.logging")
+local async = require("plenary.async")
 local Path = require("plenary.path")
 local lib = require("neotest.lib")
 local base = require("neotest-plenary.base")
@@ -86,11 +86,18 @@ function PlenaryNeotestAdapter.build_spec(args)
       table.insert(filters, 1, { parent_pos.range[1], parent_pos.range[3] })
     end
   end
+  local min_init
+  for _, path in ipairs(async.fn.glob("**/minimal_init*", true, true)) do
+    min_init = path
+  end
+
   local command = vim.tbl_flatten({
     "nvim",
     "--headless",
     "-u",
-    test_script,
+    min_init or "NONE",
+    "-c",
+    "source " .. test_script,
     "--noplugin",
     "-c",
     "lua _run_tests({results = '"
