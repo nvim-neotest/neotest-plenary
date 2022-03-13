@@ -1,4 +1,4 @@
-local async = require("plenary.async")
+local async = require("neotest.async")
 local Path = require("plenary.path")
 local lib = require("neotest.lib")
 local base = require("neotest-plenary.base")
@@ -261,7 +261,7 @@ function PlenaryNeotestAdapter.results(spec, _, tree)
 end
 
 setmetatable(PlenaryNeotestAdapter, {
-  __call = function(_, opts)
+  __call = function()
     return PlenaryNeotestAdapter
   end,
 })

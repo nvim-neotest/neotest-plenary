@@ -7,7 +7,7 @@ _G._run_tests = function(args)
     local code
 
     local busted = require("plenary.busted")
-    local async = require("plenary.async")
+    local async = require("neotest.async")
     local base_format = busted.format_results
     local func_locations = {}
     os.exit = function(code_)
