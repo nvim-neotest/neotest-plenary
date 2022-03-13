@@ -25,7 +25,7 @@ end
 
 local test_script = (Path.new(script_path()):parent():parent() / "run_tests.lua").filename
 
----@type NeotestAdapter
+---@type neotest.Adapter
 local PlenaryNeotestAdapter = { name = "neotest-plenary" }
 
 PlenaryNeotestAdapter.root = lib.files.match_root_pattern("lua")
@@ -63,8 +63,8 @@ function PlenaryNeotestAdapter.discover_positions(path)
   return lib.treesitter.parse_positions(path, query, { nested_namespaces = true })
 end
 
----@param args NeotestRunArgs
----@return NeotestRunSpec | nil
+---@param args neotest.RunArgs
+---@return neotest.RunSpec | nil
 function PlenaryNeotestAdapter.build_spec(args)
   local results_path = vim.fn.tempname()
   local tree = args.tree
@@ -126,9 +126,6 @@ local function convert_plenary_result(result, status, file)
       errors = result.msg and {
         {
           message = result.msg,
-          line = result.trace
-            and result.trace.source == "@" .. file
-            and result.trace.currentline - 1,
         },
       },
     }
@@ -166,10 +163,10 @@ end
 ---@field locations table<string, integer>
 
 ---@async
----@param spec NeotestRunSpec
----@param _ NeotestStrategyResult
+---@param spec neotest.RunSpec
+---@param _ neotest.StrategyResult
 ---@param tree Tree
----@return NeotestResult[]
+---@return neotest.Result[]
 function PlenaryNeotestAdapter.results(spec, _, tree)
   if tree:data().type == "file" and #tree:children() == 0 then
     tree = PlenaryNeotestAdapter.discover_positions(tree:data().path)
