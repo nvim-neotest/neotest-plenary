@@ -7,6 +7,8 @@
 This is WIP as use cases are discovered. Currently any `minimal_init.lua/vim` will be used when running tests.
 If you have extra requirements for running tests, please raise an issue to discuss incorporating it into this adapter.
 
+Requires [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) and the parser for lua.
+
 ```lua
 require("neotest").setup({
   adapters = {
