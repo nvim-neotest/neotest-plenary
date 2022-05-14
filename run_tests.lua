@@ -1,17 +1,21 @@
 _G._run_tests = function(args)
-  local base_exit = os.exit
   local success = pcall(function()
     local filters = args.filter or {}
     local file = args.file
     local results
-    local code
+    local code = 0
 
     local busted = require("plenary.busted")
     local async = require("neotest.async")
     local base_format = busted.format_results
     local func_locations = {}
-    os.exit = function(code_)
-      code = code_
+    local base_cmd = vim.cmd
+    vim.cmd = function(cmd)
+      if vim.endswith(cmd, "cq") then
+        code = string.sub(cmd, 0, 1)
+        return
+      end
+      return base_cmd(cmd)
     end
     busted.format_results = function(results_)
       results = results_
@@ -62,9 +66,9 @@ _G._run_tests = function(args)
     local results_file = assert(io.open(args.results, "w"))
     results_file:write(vim.json.encode({ results = results, locations = func_locations }))
     results_file:close()
-    base_exit(code)
+    os.exit(code)
   end)
   if not success then
-    base_exit(1)
+    os.exit(1)
   end
 end

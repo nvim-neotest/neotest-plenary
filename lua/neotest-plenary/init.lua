@@ -35,7 +35,7 @@ function PlenaryNeotestAdapter.is_test_file(file_path)
 end
 
 ---@async
----@return Tree | nil
+---@return neotest.Tree | nil
 function PlenaryNeotestAdapter.discover_positions(path)
   local query = [[
   ;; describe blocks
@@ -89,6 +89,11 @@ function PlenaryNeotestAdapter.build_spec(args)
   local min_init
   for _, path in ipairs(async.fn.glob("**/minimal_init*", true, true)) do
     min_init = path
+  end
+  if not min_init then
+    for _, path in ipairs(async.fn.glob("test*/init.vim", true, true)) do
+      min_init = path
+    end
   end
 
   local command = vim.tbl_flatten({
@@ -165,7 +170,7 @@ end
 ---@async
 ---@param spec neotest.RunSpec
 ---@param _ neotest.StrategyResult
----@param tree Tree
+---@param tree neotest.Tree
 ---@return neotest.Result[]
 function PlenaryNeotestAdapter.results(spec, _, tree)
   if tree:data().type == "file" and #tree:children() == 0 then
@@ -202,7 +207,7 @@ function PlenaryNeotestAdapter.results(spec, _, tree)
 
   results[spec.context.file] = file_result
 
-  --- We now have all results mapped by their alias names
+  --- We now have all results mapped by their runtime names
   --- Need to combine using alias map
 
   local aliases = {}
