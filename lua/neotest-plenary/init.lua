@@ -97,7 +97,7 @@ function PlenaryNeotestAdapter.build_spec(args)
   end
 
   local command = vim.tbl_flatten({
-    "nvim",
+    vim.loop.exepath(),
     "--headless",
     "-u",
     min_init or "NONE",
