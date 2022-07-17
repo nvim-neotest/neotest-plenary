@@ -1,5 +1,5 @@
 _G._run_tests = function(args)
-  local success = pcall(function()
+  local success, error = pcall(function()
     local filters = args.filter or {}
     local file = args.file
     local results
@@ -69,6 +69,7 @@ _G._run_tests = function(args)
     os.exit(code)
   end)
   if not success then
+    print(error)
     os.exit(1)
   end
 end
