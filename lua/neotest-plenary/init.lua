@@ -66,7 +66,7 @@ end
 ---@param args neotest.RunArgs
 ---@return neotest.RunSpec | nil
 function PlenaryNeotestAdapter.build_spec(args)
-  local results_path = vim.fn.tempname()
+  local results_path = async.fn.tempname()
   local tree = args.tree
   if not tree then
     return
@@ -108,7 +108,7 @@ function PlenaryNeotestAdapter.build_spec(args)
     "lua _run_tests({results = '"
       .. results_path
       .. "', file = '"
-      .. vim.fn.escape(pos.path, "'")
+      .. async.fn.escape(pos.path, "'")
       .. "', filter = "
       .. vim.inspect(filters)
       .. "})",
