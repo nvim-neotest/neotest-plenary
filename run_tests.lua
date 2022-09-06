@@ -6,6 +6,8 @@ _G._run_tests = function(args)
     local code = 0
 
     local busted = require("plenary.busted")
+    -- May be optional
+    pcall(vim.cmd, "packadd neotest")
     local async = require("neotest.async")
     local base_format = busted.format_results
     local func_locations = {}
