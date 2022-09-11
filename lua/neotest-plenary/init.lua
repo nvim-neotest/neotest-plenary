@@ -5,7 +5,7 @@ local base = require("neotest-plenary.base")
 
 local function script_path()
   local str = debug.getinfo(2, "S").source:sub(2)
-  return str:match("(.*/)")
+  return str:match(("(.*%s)"):format(lib.files.sep))
 end
 
 local function join_results(base_result, update)
@@ -13,10 +13,10 @@ local function join_results(base_result, update)
     return base_result or update
   end
   local status = (base_result.status == "failed" or update.status == "failed") and "failed"
-    or "passed"
+      or "passed"
   local errors = (base_result.errors or update.errors)
       and (vim.list_extend(base_result.errors or {}, update.errors or {}))
-    or nil
+      or nil
   return {
     status = status,
     errors = errors,
@@ -87,11 +87,11 @@ function PlenaryNeotestAdapter.build_spec(args)
     end
   end
   local min_init
-  for _, path in ipairs(async.fn.glob("**/minimal_init*", true, true)) do
+  for _, path in ipairs(async.fn.glob(("**%sminimal_init*"):format(lib.files.sep), true, true)) do
     min_init = path
   end
   if not min_init then
-    for _, path in ipairs(async.fn.glob("test*/init.vim", true, true)) do
+    for _, path in ipairs(async.fn.glob(("test*%sinit.vim"):format(lib.files.sep), true, true)) do
       min_init = path
     end
   end
@@ -105,13 +105,10 @@ function PlenaryNeotestAdapter.build_spec(args)
     "source " .. test_script,
     "--noplugin",
     "-c",
-    "lua _run_tests({results = '"
-      .. results_path
-      .. "', file = '"
-      .. async.fn.escape(pos.path, "'")
-      .. "', filter = "
-      .. vim.inspect(filters)
-      .. "})",
+    "lua _run_tests({results = '" .. results_path .. "', file = '" .. async.fn.escape(
+      pos.path,
+      "'"
+    ) .. "', filter = " .. vim.inspect(filters) .. "})",
   })
   return {
     command = command,
@@ -125,15 +122,15 @@ end
 ---@param result PlenaryTestResult
 local function convert_plenary_result(result, status, file)
   return table.concat(vim.tbl_flatten({ file, result.descriptions }), "::"),
-    {
-      status = status,
-      short = result.msg,
-      errors = result.msg and {
-        {
-          message = result.msg,
+      {
+        status = status,
+        short = result.msg,
+        errors = result.msg and {
+          {
+            message = result.msg,
+          },
         },
-      },
-    }
+      }
 end
 
 ---@param lists string[][]
