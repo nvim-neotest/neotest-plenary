@@ -13,10 +13,10 @@ local function join_results(base_result, update)
     return base_result or update
   end
   local status = (base_result.status == "failed" or update.status == "failed") and "failed"
-      or "passed"
+    or "passed"
   local errors = (base_result.errors or update.errors)
       and (vim.list_extend(base_result.errors or {}, update.errors or {}))
-      or nil
+    or nil
   return {
     status = status,
     errors = errors,
@@ -77,13 +77,13 @@ function PlenaryNeotestAdapter.build_spec(args)
   end
   local filters = {}
   if pos.type == "namespace" or pos.type == "test" then
-    table.insert(filters, 1, { pos.range[1], pos.range[3] })
+    table.insert(filters, 1, pos.range[1])
     for parent in tree:iter_parents() do
       local parent_pos = parent:data()
       if parent_pos.type ~= "namespace" then
         break
       end
-      table.insert(filters, 1, { parent_pos.range[1], parent_pos.range[3] })
+      table.insert(filters, 1, parent_pos.range[1])
     end
   end
   local min_init
@@ -122,15 +122,15 @@ end
 ---@param result PlenaryTestResult
 local function convert_plenary_result(result, status, file)
   return table.concat(vim.tbl_flatten({ file, result.descriptions }), "::"),
-      {
-        status = status,
-        short = result.msg,
-        errors = result.msg and {
-          {
-            message = result.msg,
-          },
+    {
+      status = status,
+      short = result.msg,
+      errors = result.msg and {
+        {
+          message = result.msg,
         },
-      }
+      },
+    }
 end
 
 ---@param lists string[][]
