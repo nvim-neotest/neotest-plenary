@@ -5,9 +5,8 @@ _G._run_tests = function(args)
     local results
     local code = 0
 
-    local cur_line_in_test_file = function()
-      local depth = 2
-
+    local cur_line_in_test_file = function(depth)
+      depth = depth or 2
       while true do
         local func_info = debug.getinfo(depth)
         -- We've reached the end of the stack
@@ -51,12 +50,17 @@ _G._run_tests = function(args)
 
       local filter_start = filters[1] or final_filter
 
-      local cur_line = cur_line_in_test_file()
-      if filter_start == cur_line then
-        if #filters > 0 then
-          table.remove(filters, 1)
+      local depth = 2
+      local cur_line = cur_line_in_test_file(depth)
+      while cur_line do
+        if filter_start == cur_line then
+          if #filters > 0 then
+            table.remove(filters, 1)
+          end
+          return true
         end
-        return true
+        depth = depth + 1
+        cur_line = cur_line_in_test_file(depth)
       end
     end
 
