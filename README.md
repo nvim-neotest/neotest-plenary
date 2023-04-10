@@ -12,7 +12,27 @@ Requires [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) a
 ```lua
 require("neotest").setup({
   adapters = {
-    require("neotest-plenary")
-  }
+    require("neotest-plenary"),
+  },
+})
+```
+
+## Minimal `init.lua`
+
+By default, `neotest-plenary` will glob for:
+
+- `*/testrc*`
+- `*/minimal_init*`
+- `test*/init.vim`
+
+Or, you can specify the exact file to use via:
+
+```lua
+require("neotest").setup({
+  adapters = {
+    require("neotest-plenary").setup({
+      min_init = "./path/to/test_init.lua",
+    }),
+  },
 })
 ```

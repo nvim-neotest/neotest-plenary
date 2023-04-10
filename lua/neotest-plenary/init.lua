@@ -3,6 +3,10 @@ local Path = require("plenary.path")
 local lib = require("neotest.lib")
 local base = require("neotest-plenary.base")
 
+local config = {
+  min_init = nil,
+}
+
 local function script_path()
   local str = debug.getinfo(2, "S").source:sub(2)
   return str:match(("(.*%s)"):format(lib.files.sep))
@@ -86,15 +90,23 @@ function PlenaryNeotestAdapter.build_spec(args)
       table.insert(filters, 1, parent_pos.range[1])
     end
   end
-  local min_init
-  for _, path in ipairs(async.fn.glob(("**%sminimal_init*"):format(lib.files.sep), true, true)) do
-    min_init = path
-  end
+  local min_init = config.min_init
   if not min_init then
-    for _, path in ipairs(async.fn.glob(("test*%sinit.vim"):format(lib.files.sep), true, true)) do
-      min_init = path
+    local globs = {
+      ("**%testrc*"):format(lib.files.sep),
+      ("**%sminimal_init*"):format(lib.files.sep),
+      ("test*%sinit.vim"):format(lib.files.sep),
+    }
+    for _, pattern in ipairs(globs) do
+      local glob_matches = async.fn.glob(pattern, true, true)
+      if #glob_matches > 0 then
+        min_init = glob_matches[1]
+        goto min_init_found
+      end
     end
   end
+
+  ::min_init_found::
 
   local command = vim.tbl_flatten({
     vim.loop.exepath(),
@@ -264,5 +276,11 @@ setmetatable(PlenaryNeotestAdapter, {
     return PlenaryNeotestAdapter
   end,
 })
+
+PlenaryNeotestAdapter.setup = function(opts)
+  opts = opts or {}
+  config.min_init = opts.min_init
+  return PlenaryNeotestAdapter
+end
 
 return PlenaryNeotestAdapter
