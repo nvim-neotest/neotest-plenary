@@ -101,12 +101,10 @@ function PlenaryNeotestAdapter.build_spec(args)
       local glob_matches = async.fn.glob(pattern, true, true)
       if #glob_matches > 0 then
         min_init = glob_matches[1]
-        goto min_init_found
+        break
       end
     end
   end
-
-  ::min_init_found::
 
   local command = vim.tbl_flatten({
     vim.loop.exepath(),
