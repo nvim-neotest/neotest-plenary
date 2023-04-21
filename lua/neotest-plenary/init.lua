@@ -93,7 +93,7 @@ function PlenaryNeotestAdapter.build_spec(args)
   local min_init = config.min_init
   if not min_init then
     local globs = {
-      ("**%testrc*"):format(lib.files.sep),
+      ("**%stestrc*"):format(lib.files.sep),
       ("**%sminimal_init*"):format(lib.files.sep),
       ("test*%sinit.vim"):format(lib.files.sep),
     }
