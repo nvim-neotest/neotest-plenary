@@ -120,12 +120,14 @@ function PlenaryNeotestAdapter.build_spec(args)
       "'"
     ) .. "', filter = " .. vim.inspect(filters) .. "})",
   })
+  strategy = base.get_strategy_config(args.strategy)
   return {
     command = command,
     context = {
       results_path = results_path,
       file = pos.path,
     },
+    straregy = strategy,
   }
 end
 
