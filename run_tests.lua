@@ -1,3 +1,5 @@
+-- The test script to run busted tests in a separate headless nvim process
+
 _G._run_tests = function(args)
   local success, error = pcall(function()
     local filters = args.filter or {}

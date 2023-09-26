@@ -3,6 +3,12 @@ local Path = require("plenary.path")
 local lib = require("neotest.lib")
 local base = require("neotest-plenary.base")
 
+-- the local path to the plenary.nvim plugin installed
+---@type string
+local plenary_dir = vim.fn.fnamemodify(
+  debug.getinfo(require("plenary.busted").run).source:match("@?(.*[/\\])"), ":p:h:h:h"
+)
+
 local config = {
   min_init = nil,
 }
@@ -27,6 +33,7 @@ local function join_results(base_result, update)
   }
 end
 
+-- see ../../run_tests.lua
 local test_script = (Path.new(script_path()):parent():parent() / "run_tests.lua").filename
 
 ---@type neotest.Adapter
@@ -106,16 +113,20 @@ function PlenaryNeotestAdapter.build_spec(args)
     end
   end
 
+  local cwd = assert(vim.loop.cwd())
   local command = vim.tbl_flatten({
     vim.loop.exepath(),
     "--headless",
-    "-u",
-    min_init or "NONE",
-    "-c",
-    "source " .. test_script,
+    "-i", "NONE", -- no shada
+    "-n", -- no swpafile, always in-memory
     "--noplugin",
-    "-c",
-    "lua _run_tests({results = '" .. results_path .. "', file = '" .. async.fn.escape(
+    -- add plenary.nvim to &runtimepath (should be available before init config)
+    "--cmd", ([[lua vim.opt.runtimepath:prepend('%s')]]):format(vim.fn.escape(plenary_dir, " '")),
+    -- Make lua modules at ./lua/ loadable
+    "--cmd", [[lua package.path = 'lua/?.lua;' .. 'lua/?/init.lua;' .. package.path]],
+    "-u", min_init or "NONE",
+    "-c", "source " .. test_script,
+    "-c", "lua _run_tests({results = '" .. results_path .. "', file = '" .. async.fn.escape(
       pos.path,
       "'"
     ) .. "', filter = " .. vim.inspect(filters) .. "})",
