@@ -1,9 +1,21 @@
 -- The test script to run busted tests in a separate headless nvim process
 
+local colored = function(color, str)
+  local color_table = {
+    red = 31,
+    green = 32,
+    yellow = 33,
+  }
+  return string.format(
+    "%s[%sm%s%s[%sm", string.char(27), color_table[color] or 0,
+    str, string.char(27), 0)
+end
+
 _G._run_tests = function(args)
-  local success, error = pcall(function()
-    local filters = args.filter or {}
-    local file = args.file
+  local filters = args.filter or {}
+  local file = args.file
+
+  xpcall(function()
     local results
     local code = 0
 
@@ -26,6 +38,7 @@ _G._run_tests = function(args)
     end
 
     local busted = require("plenary.busted")
+
     -- May be optional
     pcall(vim.cmd, "packadd neotest")
     local base_format = busted.format_results
@@ -81,17 +94,33 @@ _G._run_tests = function(args)
     busted.inner_describe = wrap_busted_func(busted.inner_describe)
     busted.it = wrap_busted_func(busted.it)
 
+    ---@diagnostic disable-next-line: lowercase-global
     it = busted.it
     describe = busted.describe
+    ---@diagnostic enable-next-line: lowercase-global
 
     busted.run(file)
     local results_file = assert(io.open(args.results, "w"))
     results_file:write(vim.json.encode({ results = results, locations = func_locations }))
     results_file:close()
+
     os.exit(code)
-  end)
-  if not success then
-    print(error)
+
+  end, function(err)
+    -- Show stacktrace when lua exception is thrown
+    local trace = debug.traceback(err, 2)
+    local msg = "\n" .. colored("red", "Error happened while testing " .. file .. ":\n")
+    io.stdout:write(msg .. trace)
+    io.stdout:write "\r\n"
+
+    -- Show some debugging information in the test output
+    -- this helps to troubleshoot for lua module paths
+    local SEPARATOR = string.rep("=", 40)
+    print("\n" .. SEPARATOR .. "\n")
+
+    io.stdout:write(colored('yellow', "&runtimepath: ") .. vim.o.runtimepath)
+    io.stdout:write "\r\n"
+
     os.exit(1)
-  end
+  end)
 end
