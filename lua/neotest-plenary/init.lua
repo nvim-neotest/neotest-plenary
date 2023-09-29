@@ -3,12 +3,6 @@ local Path = require("plenary.path")
 local lib = require("neotest.lib")
 local base = require("neotest-plenary.base")
 
--- the local path to the plenary.nvim plugin installed
----@type string
-local plenary_dir = vim.fn.fnamemodify(
-  debug.getinfo(require("plenary.busted").run).source:match("@?(.*[/\\])"), ":p:h:h:h"
-)
-
 local config = {
   min_init = nil,
 }
@@ -112,6 +106,12 @@ function PlenaryNeotestAdapter.build_spec(args)
       end
     end
   end
+
+  -- the local path to the plenary.nvim plugin installed
+  ---@type string
+  local plenary_dir = vim.fn.fnamemodify(
+    debug.getinfo(require("plenary.path").__index).source:match("@?(.*[/\\])"), ":p:h:h:h"
+  )
 
   local cwd = assert(vim.loop.cwd())
   local command = vim.tbl_flatten({
