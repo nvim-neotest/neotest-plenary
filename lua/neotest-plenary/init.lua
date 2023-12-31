@@ -3,10 +3,6 @@ local Path = require("plenary.path")
 local lib = require("neotest.lib")
 local base = require("neotest-plenary.base")
 
-local config = {
-  min_init = nil,
-}
-
 local function script_path()
   local str = debug.getinfo(2, "S").source:sub(2)
   return str:match(("(.*%s)"):format(lib.files.sep))
@@ -31,9 +27,17 @@ end
 local test_script = (Path.new(script_path()):parent():parent() / "run_tests.lua").filename
 
 ---@type neotest.Adapter
-local PlenaryNeotestAdapter = { name = "neotest-plenary" }
+local PlenaryNeotestAdapter = {
+  name = "neotest-plenary",
+  config = { min_init = nil },
+  root = lib.files.match_root_pattern("lua"),
+}
 
-PlenaryNeotestAdapter.root = lib.files.match_root_pattern("lua")
+function PlenaryNeotestAdapter:init()
+  self.name = "neotest-plenary"
+  self.config = { min_init = nil }
+  self.root = lib.files.match_root_pattern("lua")
+end
 
 function PlenaryNeotestAdapter.is_test_file(file_path)
   return base.is_test_file(file_path)
@@ -68,11 +72,38 @@ function PlenaryNeotestAdapter.discover_positions(path)
   return lib.treesitter.parse_positions(path, query, { nested_namespaces = true })
 end
 
+local function deduplicate(table)
+  local table_unique = {}
+  local hash = {}
+  for _, v in ipairs(table) do
+    if not hash[v] then
+      table_unique[#table_unique + 1] = v
+      hash[v] = true
+    end
+  end
+  return table_unique
+end
+
+local function match_globs(globs)
+  local glob_matches = {}
+  for _, pattern in ipairs(globs) do
+    local match = async.fn.glob(pattern, true, true)
+    vim.list_extend(glob_matches, match)
+  end
+  local glob_matches_unique = deduplicate(glob_matches)
+  print("=== globs found ===")
+  print(table.concat(glob_matches_unique, " "))
+  if #glob_matches_unique > 0 then
+    return glob_matches_unique[1]
+  end
+end
+
 ---@param args neotest.RunArgs
 ---@return neotest.RunSpec | nil
 function PlenaryNeotestAdapter.build_spec(args)
   local results_path = async.fn.tempname()
   local tree = args.tree
+  local config = PlenaryNeotestAdapter.config
   if not tree then
     return
   end
@@ -91,42 +122,46 @@ function PlenaryNeotestAdapter.build_spec(args)
       table.insert(filters, 1, parent_pos.range[1])
     end
   end
-  local min_init = config.min_init
-  if not min_init then
-    local globs = {
-      ("**%stestrc*"):format(lib.files.sep),
+  print("===== Plenary Tests =====")
+  vim.print(config)
+  local globs = config.min_init_globs
+    or {
       ("**%sminimal_init*"):format(lib.files.sep),
-      ("test*%sinit.vim"):format(lib.files.sep),
+      ("test*%sminimal_init*"):format(lib.files.sep),
+      ("**%stestrc*"):format(lib.files.sep),
+      --("**%stestrc*"):format(lib.files.sep),
+      --("**%sminimal_init*"):format(lib.files.sep),
+      --("test*%sinit.vim"):format(lib.files.sep),
     }
-    for _, pattern in ipairs(globs) do
-      local glob_matches = async.fn.glob(pattern, true, true)
-      if #glob_matches > 0 then
-        min_init = glob_matches[1]
-        break
-      end
-    end
-  end
+  local min_init = config.min_init or match_globs(globs)
 
   -- the local path to the plenary.nvim plugin installed
   ---@type string
   local plenary_dir = vim.fn.fnamemodify(
-    debug.getinfo(require("plenary.path").__index).source:match("@?(.*[/\\])"), ":p:h:h:h"
+    debug.getinfo(require("plenary.path").__index).source:match("@?(.*[/\\])"),
+    ":p:h:h:h"
   )
 
   local cwd = assert(vim.loop.cwd())
   local command = vim.tbl_flatten({
     vim.loop.exepath(),
     "--headless",
-    "-i", "NONE", -- no shada
+    "-i",
+    "NONE", -- no shada
     "-n", -- no swpafile, always in-memory
     "--noplugin",
     -- add plenary.nvim to &runtimepath (should be available before init config)
-    "--cmd", ([[lua vim.opt.runtimepath:prepend('%s')]]):format(vim.fn.escape(plenary_dir, " '")),
+    "--cmd",
+    ([[lua vim.opt.runtimepath:prepend('%s')]]):format(vim.fn.escape(plenary_dir, " '")),
     -- Make lua modules at ./lua/ loadable
-    "--cmd", [[lua package.path = 'lua/?.lua;' .. 'lua/?/init.lua;' .. package.path]],
-    "-u", min_init or "NONE",
-    "-c", "source " .. test_script,
-    "-c", "lua _run_tests({results = '" .. results_path .. "', file = '" .. async.fn.escape(
+    "--cmd",
+    [[lua package.path = 'lua/?.lua;' .. 'lua/?/init.lua;' .. package.path]],
+    "-u",
+    min_init or "NONE",
+    "-c",
+    "source " .. test_script,
+    "-c",
+    "lua _run_tests({results = '" .. results_path .. "', file = '" .. async.fn.escape(
       pos.path,
       "'"
     ) .. "', filter = " .. vim.inspect(filters) .. "})",
@@ -280,16 +315,15 @@ function PlenaryNeotestAdapter.results(spec, _, tree)
   return results
 end
 
-setmetatable(PlenaryNeotestAdapter, {
-  __call = function()
-    return PlenaryNeotestAdapter
-  end,
-})
-
-PlenaryNeotestAdapter.setup = function(opts)
-  opts = opts or {}
-  config.min_init = opts.min_init
+function PlenaryNeotestAdapter.setup(opts)
+  PlenaryNeotestAdapter.config = vim.tbl_extend("keep", opts, PlenaryNeotestAdapter.config)
   return PlenaryNeotestAdapter
 end
 
+setmetatable(PlenaryNeotestAdapter, {
+  __call = function(_, opts)
+    PlenaryNeotestAdapter.setup(opts)
+    return PlenaryNeotestAdapter
+  end,
+})
 return PlenaryNeotestAdapter
