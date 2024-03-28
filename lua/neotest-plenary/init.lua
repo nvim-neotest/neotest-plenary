@@ -8,8 +8,23 @@ local config = {
 }
 
 local function script_path()
-  local str = debug.getinfo(2, "S").source:sub(2)
-  return str:match(("(.*%s)"):format(lib.files.sep))
+
+  -- -- Returns: C:/Users/dlomax/nvim-plugin-development/neotest-plenary/lua/neotest-plenary/init.lua
+  -- local str = debug.getinfo(1, "S").source
+  -- return str:match("@?(.*)")
+
+  -- -- Returns nil
+  -- local str = debug.getinfo(2, "S").source:sub(2)
+  -- return str:match(("(.*%s)"):format(lib.files.sep))
+
+  -- -- Returns nil
+  -- local str = debug.getinfo(2, "S").source
+  -- return str:match(("(.*%s)"):format(lib.files.sep))
+
+  -- Returns: C:/Users/dlomax/nvim-plugin-development/neotest-plenary/lua/neotest-plenary/init.lua
+  local str = debug.getinfo(2, "S").source
+  return str:match("@?(.*)")
+
 end
 
 local function join_results(base_result, update)
@@ -28,7 +43,15 @@ local function join_results(base_result, update)
 end
 
 -- see ../../run_tests.lua
-local test_script = (Path.new(script_path()):parent():parent() / "run_tests.lua").filename
+--
+-- returns: C:\\run_tests.lua WTF how did it get chopped so bad?
+-- local test_script = (Path.new(script_path()):parent():parent() / "run_tests.lua").filename
+
+-- Let's try a simpler approach, even on windows the path separator returned
+-- here is '/'. Do not include the '-' dash symbol directly in the
+-- neotest-plenary as it has special meaning in lua patterns. Either use '%-' or
+-- '[-]'
+local test_script = (script_path():gsub("lua/neotest[-]plenary/init.lua", "run_tests.lua"))
 
 ---@type neotest.Adapter
 local PlenaryNeotestAdapter = { name = "neotest-plenary" }
@@ -131,6 +154,10 @@ function PlenaryNeotestAdapter.build_spec(args)
       "'"
     ) .. "', filter = " .. vim.inspect(filters) .. "})",
   })
+
+  vim.notify(script_path() or 'script_path is nil')
+  vim.notify(test_script)
+
   return {
     command = command,
     context = {
