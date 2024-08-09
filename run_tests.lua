@@ -5,7 +5,6 @@ _G._run_tests = function(args)
     local filters = args.filter or {}
     local file = args.file
     local results
-    local code = 0
 
     local cur_line_in_test_file = function(depth)
       depth = depth or 2
@@ -32,8 +31,12 @@ _G._run_tests = function(args)
     local func_locations = {}
     local base_cmd = vim.cmd
     vim.cmd = function(cmd)
-      if vim.endswith(cmd, "cq") then
-        code = string.sub(cmd, 0, 1)
+      if cmd:match("^%dcq$") then
+        local code = tonumber(string.sub(cmd, 0, 1))
+        local results_file = assert(io.open(args.results, "w"))
+        results_file:write(vim.json.encode({ results = results, locations = func_locations }))
+        results_file:close()
+        os.exit(code)
         return
       end
       return base_cmd(cmd)
@@ -85,10 +88,6 @@ _G._run_tests = function(args)
     describe = busted.describe
 
     busted.run(file)
-    local results_file = assert(io.open(args.results, "w"))
-    results_file:write(vim.json.encode({ results = results, locations = func_locations }))
-    results_file:close()
-    os.exit(code)
   end)
   if not success then
     print(error)
