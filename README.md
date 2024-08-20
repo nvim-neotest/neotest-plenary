@@ -25,14 +25,18 @@ By default, `neotest-plenary` will glob for:
 - `*/minimal_init*`
 - `test*/init.vim`
 
-Or, you can specify the exact file to use via:
+Or, you can specify the exact file to use via, with each instance of the adapter
+having different configurations.
 
 ```lua
 require("neotest").setup({
-  adapters = {
-    require("neotest-plenary").setup({
+  projects = {
+    ["~/Dev/my-plugin"] = require("neotest-plenary")({
       min_init = "./path/to/test_init.lua",
     }),
+  },
+  adapters = {
+    require("neotest-plenary"), -- Default globbing for all other projects
   },
 })
 ```
