@@ -25,6 +25,8 @@ _G._run_tests = function(args)
     end
 
     local busted = require("plenary.busted")
+    require("luassert.assert"):set_parameter("TableErrorHighlightColor", "none")
+
     -- May be optional
     pcall(vim.cmd, "packadd neotest")
     local base_format = busted.format_results
