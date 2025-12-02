@@ -30,17 +30,20 @@ _G._run_tests = function(args)
     local base_format = busted.format_results
     local func_locations = {}
     local base_cmd = vim.cmd
-    vim.cmd = function(cmd)
-      if cmd:match("^%dcq$") then
-        local code = tonumber(string.sub(cmd, 0, 1))
-        local results_file = assert(io.open(args.results, "w"))
-        results_file:write(vim.json.encode({ results = results, locations = func_locations }))
-        results_file:close()
-        os.exit(code)
-        return
-      end
-      return base_cmd(cmd)
-    end
+    vim.cmd = setmetatable({}, {
+      __call = function(_, cmd)
+        if cmd:match("^%dcq$") then
+          local code = tonumber(string.sub(cmd, 0, 1))
+          local results_file = assert(io.open(args.results, "w"))
+          results_file:write(vim.json.encode({ results = results, locations = func_locations }))
+          results_file:close()
+          os.exit(code)
+          return
+        end
+        return base_cmd(cmd)
+      end,
+      __index = base_cmd,
+    })
     busted.format_results = function(results_)
       results = results_
       return base_format(results)
