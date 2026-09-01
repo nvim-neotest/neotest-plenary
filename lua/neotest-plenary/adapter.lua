@@ -2,6 +2,7 @@ local nio = require("nio")
 local lib = require("neotest.lib")
 local base = require("neotest-plenary.base")
 local collect_results = require("neotest-plenary.results")
+local uv = vim.uv or vim.loop
 
 ---@param config { min_init?: string }
 return function(config)
@@ -67,7 +68,7 @@ return function(config)
 
       local command = vim
         .iter({
-          vim.loop.exepath(),
+          uv.exepath(),
           "--headless",
           "-i",
           "NONE", -- no shada
